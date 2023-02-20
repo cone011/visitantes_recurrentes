@@ -65,3 +65,7 @@ app.get("/", async (req, res, next) => {
     res.render("index", { visitors: visitors });
   }
 });
+
+app.listen(process.env.PORT || 3000, () => {
+  console.log("Listening on port 3000!");
+});
