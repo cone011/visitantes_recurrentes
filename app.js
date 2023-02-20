@@ -1,71 +1,56 @@
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
-const Visitor = require("./models/Visitor");
 
+const Visitor = require("./models/Visitor");
 app.set("view engine", "pug");
 app.set("views", "views");
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: true }));
 
 mongoose.set("strictQuery", false);
 mongoose.connect(
   process.env.MONGODB_URL || "mongodb://localhost:27017/mongo-1",
   { useNewUrlParser: true }
 );
-mongoose.connection.on("connection", (e) => {
-  console.log("Database connected");
-});
-mongoose.connection.off("error", (e) => {
+mongoose.connection.on("error", function (e) {
   console.error(e);
 });
 
 app.get("/", async (req, res, next) => {
-  const name = req.query.name ? req.query.name : "Anónimo";
+  const name = !req.query.name ? "Anónimo" : req.query.name;
 
   if (name === "Anónimo") {
-    let data = {
-      date: Date.now(),
+    const data = {
       name: name,
       count: 1,
     };
     try {
-      let visitorObject = new Visitor(data);
-      await visitorObject.save();
-    } catch (err) {
-      console.log(err);
-      return next(err);
+      const visitor = new Visitor(data);
+      await visitor.save();
+    } catch (e) {
+      return next(e);
     }
   } else {
-    const visitorObject = await Visitor.findOne({ name: name });
-    if (visitorObject) {
-      visitorObject.count += 1;
-      visitorObject.date = Date.now();
+    const visitor = await Visitor.findOne({ name: name });
+    if (visitor) {
+      visitor.count += 1;
       try {
-        let visitorObject = new Visitor(visitorObject);
-        await visitorObject.save();
-      } catch (err) {
-        console.log(err);
-        return next(err);
+        await visitor.save({});
+      } catch (e) {
+        return next(e);
       }
     } else {
-      let data = {
-        date: Date.now(),
-        name: name,
-        count: 1,
-      };
+      const data = { name: name, count: 1 };
       try {
-        let visitorObject = new Visitor(data);
-        await visitorObject.save();
-      } catch (err) {
-        console.log(err);
-        return next(err);
+        const visitor = new Visitor(data);
+        await visitor.save();
+      } catch (e) {
+        return next(e);
       }
     }
-    let visitors = await Visitor.find();
-    res.render("index", { visitors: visitors });
   }
+  const visitors = await Visitor.find();
+  res.render("index", { visitors: visitors });
 });
 
-app.listen(process.env.PORT || 3000, () => {
-  console.log("Listening on port 3000!");
-});
+app.listen(3000, () => console.log("Listening on port 3000!"));
